@@ -1,5 +1,4 @@
 define PROJECT_HELP_MSG
-
 Usage:
     make help			show this message
     make clean			remove intermediate files
@@ -10,31 +9,26 @@ Usage:
     make setup			make python-reqs
 
     make run			launch network-video-recorder
-
 endef
 export PROJECT_HELP_MSG
+
+VENV = .venv
+PYTHON = $(VENV)/bin/python3
+PIP = $(VENV)/bin/pip
 
 help:
 	echo "$$PROJECT_HELP_MSG" | less
 
-VENV = .venv
-export VIRTUAL_ENV := $(abspath ${VENV})
-export PATH := ${VIRTUAL_ENV}/bin:${PATH}
+$(VENV)/bin/activate: requirements.txt
+	python3 -m venv $(VENV)
+	$(PIP) install -r requirements.txt
 
-${VENV}:
-	python3 -m venv $@
+run: $(VENV)/bin/activate
+	source /opt/intel/openvino/bin/setupvars.sh; python3 network_video_recorder/network_video_recorder.py -d CPU -i ./resources/face-demographics-walking.mp4 -i2 ./resources/people-detection.mp4 -m ./resources/models/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml
 
-python-reqs: requirements.txt | ${VENV}
-	. .venv/bin/activate; pip install --upgrade -r requirements.txt
-
-setup: ${VENV} python-reqs
-
-run:
-	. .venv/bin/activate; source /opt/intel/openvino/bin/setupvars.sh; python3 network_video_recorder/network_video_recorder.py -d CPU -i ./resources/face-demographics-walking.mp4 -i2 ./resources/people-detection.mp4 -m ./resources/models/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml
-
-CLEANUP = *.pyc
-
+CLEANUP = *.pyc $(VENV)
 clean:
 	rm -rf ${CLEANUP}
 
-PHONY: python-reqs setup
+.PHONY: run clean
+
