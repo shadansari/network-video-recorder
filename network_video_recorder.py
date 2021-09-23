@@ -15,18 +15,16 @@
 """
 
 from __future__ import print_function
-import sys
-import os
-from argparse import ArgumentParser, SUPPRESS
-import cv2
-import time
-import logging as log
-from openvino.inference_engine import IENetwork, IECore
 
-#Added here
-import numpy as np
-import imutils
+import logging as log
+import os
+import sys
+import time
+from argparse import ArgumentParser, SUPPRESS
+
+import cv2
 from imutils import build_montages
+from openvino.inference_engine import IECore
 
 
 def build_argparser():
@@ -38,7 +36,6 @@ def build_argparser():
     args.add_argument("-i", "--input",
                       help="Required. Path to video file or image. 'cam' for capturing video stream from camera",
                       required=True, type=str)
-    #Added here
     args.add_argument("-i2", "--input2",
                       help="Optional. Path to second video file or image. 'cam' for capturing video stream from camera",
                       default=None, type=str)
@@ -64,21 +61,18 @@ def main():
     model_bin = os.path.splitext(model_xml)[0] + ".bin"
     # Plugin initialization for specified device and load extensions library if specified
     log.info("Initializing plugin for {} device...".format(args.device))
-    #plugin = IEPlugin(device=args.device, plugin_dirs=args.plugin_dir)
-    #if args.cpu_extension and 'CPU' in args.device:
-     #   plugin.add_cpu_extension(args.cpu_extension)
+    # plugin = IEPlugin(device=args.device, plugin_dirs=args.plugin_dir)
+    # if args.cpu_extension and 'CPU' in args.device:
+    #   plugin.add_cpu_extension(args.cpu_extension)
     # Read IR
     log.info("Reading IR...")
     net = IECore().read_network(model=model_xml, weights=model_bin)
 
-    if "CPU" in args.device:
-        supported_layers = IECore().query_network(net, "CPU")
     assert len(net.inputs.keys()) == 1, "Demo supports only single input topologies"
     assert len(net.outputs) == 1, "Demo supports only single output topologies"
     input_blob = next(iter(net.inputs))
     out_blob = next(iter(net.outputs))
     
-    #Added here
     input_blob2 = next(iter(net.inputs))
     out_blob2 = next(iter(net.outputs))
     
@@ -86,33 +80,25 @@ def main():
     exec_net = IECore().load_network(network=net, device_name=args.device, num_requests=2)
     # Read and pre-process input image
     n, c, h, w = net.inputs[input_blob].shape
-    #Added here
-    n2,c2,h2,w2 = net.inputs[input_blob2].shape
+    n2, c2, h2, w2 = net.inputs[input_blob2].shape
     del net
-    #added from here
     if args.input == 'cam':
         input_stream = 0
     elif args.input == 'gstreamer':
-        #gst rtp sink
+        # gst rtp sink
         input_stream = 'udpsrc port=5000 caps = " application/x-rtp, encoding-name=JPEG,payload=26" ! rtpjpegdepay ! decodebin ! videoconvert ! appsink'
     else:
         input_stream = args.input
         assert os.path.isfile(args.input), "Specified input file doesn't exist"
-    if args.labels:
-        with open(args.labels, 'r') as f:
-            labels_map = [x.strip() for x in f]
-    else:
-        labels_map = None
-    
+
     if input_stream == 'gstreamer':
-      cap = cv2.VideoCapture(input_stream,cv2.CAP_GSTREAMER)
+        cap = cv2.VideoCapture(input_stream, cv2.CAP_GSTREAMER)
     else:
-      cap = cv2.VideoCapture(input_stream)
+        cap = cv2.VideoCapture(input_stream)
 
     if args.input2 == 'cam':
         input_stream2 = 0
     elif args.input2 == 'gstreamer':
-        #gst rtp sink
         input_stream2 = 'udpsrc port=5001 caps = " application/x-rtp, encoding-name=JPEG,payload=26" ! rtpjpegdepay ! decodebin ! videoconvert ! appsink'
     else:
         input_stream2 = args.input2
@@ -124,14 +110,13 @@ def main():
         labels_map = None
 
     if input_stream2 == 'gstreamer':
-      cap2 = cv2.VideoCapture(input_stream2,cv2.CAP_GSTREAMER)
+        cap2 = cv2.VideoCapture(input_stream2, cv2.CAP_GSTREAMER)
     else:
-      cap2 = cv2.VideoCapture(input_stream2)
+        cap2 = cv2.VideoCapture(input_stream2)
       
     cur_request_id = 0
     next_request_id = 1
     
-    #Added here
     cur_request_id2 = 1
     next_request_id2 = 0
 
@@ -139,15 +124,15 @@ def main():
     log.info("To switch between sync and async modes press Tab button")
     log.info("To stop the demo execution press Esc button")
     
-    #Async doesn't work if True
-    #Request issues = Runtime Error: [REQUEST BUSY]
+    # Async doesn't work if True
+    # Request issues = Runtime Error: [REQUEST BUSY]
     is_async_mode = False
     render_time = 0
     ret, frame = cap.read()
     ret2, frame2 = cap2.read()
     
-    #Montage width and height
-    #In this case means 2x1 boxes
+    # Montage width and height
+    # In this case means 2x1 boxes
     mW = 2
     mH = 1
 
@@ -161,7 +146,7 @@ def main():
         else:
             ret, frame = cap.read()
             ret2, frame2 = cap2.read()
-        if (not (ret and ret2)):
+        if not (ret and ret2):
             break
         initial_w = cap.get(3)
         initial_h = cap.get(4)
@@ -172,7 +157,7 @@ def main():
         # in the regular mode we start the CURRENT request and immediately wait for it's completion
         inf_start = time.time()
         if is_async_mode:
-            if (ret and ret2):
+            if ret and ret2:
                 in_frame = cv2.resize(next_frame, (w, h))
                 in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
                 in_frame = in_frame.reshape((n, c, h, w))
@@ -217,6 +202,9 @@ def main():
                     det_label = labels_map[class_id] if labels_map else str(class_id)
                     cv2.putText(frame, det_label + ' ' + str(round(obj[2] * 100, 1)) + ' %', (xmin, ymin - 7),
                                 cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+                    print('Object detected, class_id:', class_id, 'probability:', obj[2], 'xmin:', xmin, 'ymin:', ymin,
+                          'xmax:', xmax, 'ymax:', ymax)
+
             for obj in res2[0][0]:
                 # Draw only objects when probability more than specified threshold
                 if obj[2] > args.prob_threshold:
@@ -231,13 +219,17 @@ def main():
                     det_label = labels_map[class_id] if labels_map else str(class_id)
                     cv2.putText(frame2, det_label + ' ' + str(round(obj[2] * 100, 1)) + ' %', (xmin, ymin - 7),
                                 cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+                    print('Object detected, class_id:', class_id, 'probability:', obj[2], 'xmin:', xmin, 'ymin:', ymin,
+                          'xmax:', xmax, 'ymax:', ymax)
 
             # Draw performance stats
-            inf_time_message = "Inference time: N\A for async mode" if is_async_mode else \
+            inf_time_message = "Inference time: Not applicable for async mode" if is_async_mode else \
                 "Inference time: {:.3f} ms".format(det_time * 1000)
             render_time_message = "OpenCV rendering time: {:.3f} ms".format(render_time * 1000)
-            async_mode_message = "Async mode is on. Processing request {}".format(cur_request_id) if is_async_mode else \
-                "Async mode is off. Processing request {}".format(cur_request_id)
+            if is_async_mode:
+                async_mode_message = "Async mode is on. Processing request {}".format(cur_request_id)
+            else:
+                async_mode_message = "Async mode is off. Processing request {}".format(cur_request_id)
 
             cv2.putText(frame, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
             cv2.putText(frame, render_time_message, (15, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (10, 10, 200), 1)
@@ -249,26 +241,17 @@ def main():
             cv2.putText(frame2, async_mode_message, (10, int(initial_h - 20)), cv2.FONT_HERSHEY_COMPLEX, 0.5,
                         (10, 10, 200), 1)
 
-        
         render_start = time.time()
         
-        #Added here
-        #Add the frame into a list
-        
-       
-        if (ret and ret2):        
+        if ret and ret2:
             frameList.append(frame)
             frameList.append(frame2)
         
-        #build_montages function from imutils to display 2 cameras on a single dashboard
-        
-        montages = build_montages(frameList, (640,480), (mW, mH))
+        montages = build_montages(frameList, (640, 480), (mW, mH))
     
         for montage in montages:
-          cv2.imshow("Detection results" , montage)
+            cv2.imshow("Detection results", montage)
 
-        
-        #cv2.imshow("Detection Results", frame)
         render_end = time.time()
         render_time = render_end - render_start
 
@@ -280,7 +263,7 @@ def main():
         key = cv2.waitKey(1)
         if key == 27:
             break
-        if (9 == key):
+        if 9 == key:
             is_async_mode = not is_async_mode
             log.info("Switched to {} mode".format("async" if is_async_mode else "sync"))
     
