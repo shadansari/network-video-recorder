@@ -12,6 +12,7 @@ Usage:
 endef
 export PROJECT_HELP_MSG
 
+SHELL = /bin/bash
 VENV = .venv
 PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
