@@ -1,3 +1,4 @@
+#python3 docker_openvino.py build -d cpu -os ubuntu18 --distribution runtime --product_version 2021.4
 FROM ubuntu18_runtime:2021.4
 
 USER root
@@ -9,7 +10,9 @@ RUN apt-get update && apt-get install -y \
    libsm6 \
    libxrender1 \
    libxext6 \
-   vim
+   vim \
+   ffmpeg \
+   x11-apps
 
 WORKDIR /var/network-video-recorder
 

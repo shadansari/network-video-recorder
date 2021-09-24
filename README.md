@@ -211,4 +211,7 @@ Similar to the input video and camera scenarios, the detction script can be run 
 
 ```
 python3 docker_openvino.py build -d cpu -os ubuntu18 --distribution runtime --product_version 2021.4
+
+python3 docker_openvino.py build -d cpu -os ubuntu18 --distribution dev --product_version 2021.4
+docker run -itu root:root --rm ubuntu18_dev:2021.4 /bin/bash -c "apt update && apt install sudo && deployment_tools/demo/demo_security_barrier_camera.sh -d CPU -sample-options -no_show -r"
 ```
