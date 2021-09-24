@@ -247,10 +247,10 @@ def main():
             frameList.append(frame)
             frameList.append(frame2)
         
-        montages = build_montages(frameList, (640, 480), (mW, mH))
+        #montages = build_montages(frameList, (640, 480), (mW, mH))
     
-        for montage in montages:
-            cv2.imshow("Detection results", montage)
+        #for montage in montages:
+        #    cv2.imshow("Detection results", montage)
 
         render_end = time.time()
         render_time = render_end - render_start
