@@ -208,3 +208,7 @@ python3 network_video_recorder.py -i gstreamer -i2 gstreamer -m /opt/intel/openv
 
 Similar to the input video and camera scenarios, the detction script can be run on host machine using any of the target device that the user desires by using the device command-line argument `-d` followed by one of the values `CPU`, `GPU`,`MYRIAD` or `HDDL`.<br>
 
+
+```
+python3 docker_openvino.py build -d cpu -os ubuntu18 --distribution runtime --product_version 2021.4
+```
