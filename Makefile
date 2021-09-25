@@ -29,7 +29,7 @@ build:
 	docker build -f docker/Dockerfile -t $(IMAGE) .
 
 run:
-	docker run -itu root:root --privileged --name $(IMAGE) --rm $(IMAGE)
+	docker run -itu root:root --privileged --network host --name $(IMAGE) --rm $(IMAGE)
 
 run-native:
 	. ./network_video_recorder.sh
