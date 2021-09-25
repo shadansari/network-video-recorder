@@ -50,6 +50,7 @@ def build_argparser():
     args.add_argument("--labels", help="Optional. Path to labels mapping file", default=None, type=str)
     args.add_argument("-pt", "--prob_threshold", help="Optional. Probability threshold for detections filtering",
                       default=0.5, type=float)
+    args.add_argument("-ns", help='No show output', action='store_true')
 
     return parser
 
@@ -72,10 +73,10 @@ def main():
     assert len(net.outputs) == 1, "Demo supports only single output topologies"
     input_blob = next(iter(net.inputs))
     out_blob = next(iter(net.outputs))
-    
+
     input_blob2 = next(iter(net.inputs))
     out_blob2 = next(iter(net.outputs))
-    
+
     log.info("Loading IR to the plugin...")
     exec_net = IECore().load_network(network=net, device_name=args.device, num_requests=2)
     # Read and pre-process input image
@@ -113,24 +114,24 @@ def main():
         cap2 = cv2.VideoCapture(input_stream2, cv2.CAP_GSTREAMER)
     else:
         cap2 = cv2.VideoCapture(input_stream2)
-      
+
     cur_request_id = 0
     next_request_id = 1
-    
+
     cur_request_id2 = 1
     next_request_id2 = 0
 
     log.info("Starting inference in async mode...")
     log.info("To switch between sync and async modes press Tab button")
     log.info("To stop the demo execution press Esc button")
-    
+
     # Async doesn't work if True
     # Request issues = Runtime Error: [REQUEST BUSY]
     is_async_mode = False
     render_time = 0
     ret, frame = cap.read()
     ret2, frame2 = cap2.read()
-    
+
     # Montage width and height
     # In this case means 2x1 boxes
     mW = 2
@@ -167,7 +168,7 @@ def main():
                 in_frame2 = in_frame2.transpose((2, 0, 1))  # Change data layout from HWC to CHW
                 in_frame2 = in_frame2.reshape((n2, c2, h2, w2))
                 exec_net.start_async(request_id=next_request_id2, inputs={input_blob2: in_frame2})
-            
+
         else:
             if (ret and ret2):
                 in_frame = cv2.resize(frame, (w, h))
@@ -179,7 +180,7 @@ def main():
                 in_frame2 = in_frame2.transpose((2, 0, 1))  # Change data layout from HWC to CHW
                 in_frame2 = in_frame2.reshape((n2, c2, h2, w2))
                 exec_net.start_async(request_id=cur_request_id2, inputs={input_blob2: in_frame2})
-            
+
         if exec_net.requests[cur_request_id].wait(-1) == 0 and exec_net.requests[cur_request_id2].wait(-1) == 0:
             inf_end = time.time()
             det_time = inf_end - inf_start
@@ -187,7 +188,7 @@ def main():
             # Parse detection results of the current request
             res = exec_net.requests[cur_request_id].outputs[out_blob]
             res2 = exec_net.requests[cur_request_id2].outputs[out_blob2]
-            
+
             for obj in res[0][0]:
                 # Draw only objects when probability more than specified threshold
                 if obj[2] > args.prob_threshold:
@@ -242,22 +243,20 @@ def main():
                         (10, 10, 200), 1)
 
         render_start = time.time()
-        
-        if ret and ret2:
-            frameList.append(frame)
-            frameList.append(frame2)
-        
-        #montages = build_montages(frameList, (640, 480), (mW, mH))
-    
-        #for montage in montages:
-        #    cv2.imshow("Detection results", montage)
 
-        render_end = time.time()
-        render_time = render_end - render_start
+        if not args.ns:
+            if ret and ret2:
+                frameList.append(frame)
+                frameList.append(frame2)
+            montages = build_montages(frameList, (640, 480), (mW, mH))
+            for montage in montages:
+                cv2.imshow("Detection results", montage)
+            render_end = time.time()
+            render_time = render_end - render_start
 
         if is_async_mode:
             cur_request_id, next_request_id = next_request_id, cur_request_id
-            
+
             frame = next_frame
             frame2 = next_frame2
         key = cv2.waitKey(1)
@@ -266,7 +265,7 @@ def main():
         if 9 == key:
             is_async_mode = not is_async_mode
             log.info("Switched to {} mode".format("async" if is_async_mode else "sync"))
-    
+
     cap.release()
     cap2.release()
     cv2.destroyAllWindows()
