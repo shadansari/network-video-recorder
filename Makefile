@@ -26,7 +26,7 @@ $(VENV)/bin/activate: requirements.txt
 	$(PIP) install -r requirements.txt
 
 build:
-	docker build -t $(IMAGE) .
+	docker build -f docker/Dockerfile -t $(IMAGE) .
 
 run:
 	docker run -itu root:root --privileged --name $(IMAGE) --rm $(IMAGE)
