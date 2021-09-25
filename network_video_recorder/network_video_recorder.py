@@ -36,9 +36,9 @@ def build_argparser():
     args.add_argument("-i", "--input",
                       help="Required. Path to video file or image. 'cam' for capturing video stream from camera",
                       required=True, type=str)
-    args.add_argument("-i2", "--input2",
-                      help="Optional. Path to second video file or image. 'cam' for capturing video stream from camera",
-                      default=None, type=str)
+    # args.add_argument("-i2", "--input2",
+    #                   help="Optional. Path to second video file or image. 'cam' for capturing video stream from camera",
+    #                   default=None, type=str)
     args.add_argument("-l", "--cpu_extension",
                       help="Optional. Required for CPU custom layers. Absolute path to a shared library with the "
                            "kernels implementations.", type=str, default=None)
@@ -74,14 +74,15 @@ def main():
     input_blob = next(iter(net.inputs))
     out_blob = next(iter(net.outputs))
 
-    input_blob2 = next(iter(net.inputs))
-    out_blob2 = next(iter(net.outputs))
+    # input_blob2 = next(iter(net.inputs))
+    # out_blob2 = next(iter(net.outputs))
 
     log.info("Loading IR to the plugin...")
-    exec_net = IECore().load_network(network=net, device_name=args.device, num_requests=2)
+    # exec_net = IECore().load_network(network=net, device_name=args.device, num_requests=2)
+    exec_net = IECore().load_network(network=net, device_name=args.device, num_requests=1)
     # Read and pre-process input image
     n, c, h, w = net.inputs[input_blob].shape
-    n2, c2, h2, w2 = net.inputs[input_blob2].shape
+    # n2, c2, h2, w2 = net.inputs[input_blob2].shape
     del net
     if args.input == 'cam':
         input_stream = 0
@@ -97,29 +98,29 @@ def main():
     else:
         cap = cv2.VideoCapture(input_stream)
 
-    if args.input2 == 'cam':
-        input_stream2 = 0
-    elif args.input2 == 'gstreamer':
-        input_stream2 = 'udpsrc port=5001 caps = " application/x-rtp, encoding-name=JPEG,payload=26" ! rtpjpegdepay ! decodebin ! videoconvert ! appsink'
-    else:
-        input_stream2 = args.input2
-        assert os.path.isfile(args.input2), "Specified input file doesn't exist"
+    # if args.input2 == 'cam':
+    #     input_stream2 = 0
+    # elif args.input2 == 'gstreamer':
+    #     input_stream2 = 'udpsrc port=5001 caps = " application/x-rtp, encoding-name=JPEG,payload=26" ! rtpjpegdepay ! decodebin ! videoconvert ! appsink'
+    # else:
+    #     input_stream2 = args.input2
+    #     assert os.path.isfile(args.input2), "Specified input file doesn't exist"
     if args.labels:
         with open(args.labels, 'r') as f:
             labels_map = [x.strip() for x in f]
     else:
         labels_map = None
 
-    if input_stream2 == 'gstreamer':
-        cap2 = cv2.VideoCapture(input_stream2, cv2.CAP_GSTREAMER)
-    else:
-        cap2 = cv2.VideoCapture(input_stream2)
+    # if input_stream2 == 'gstreamer':
+    #     cap2 = cv2.VideoCapture(input_stream2, cv2.CAP_GSTREAMER)
+    # else:
+    #     cap2 = cv2.VideoCapture(input_stream2)
 
     cur_request_id = 0
     next_request_id = 1
 
-    cur_request_id2 = 1
-    next_request_id2 = 0
+    # cur_request_id2 = 1
+    # next_request_id2 = 0
 
     log.info("Starting inference in async mode...")
     log.info("To switch between sync and async modes press Tab button")
@@ -130,7 +131,7 @@ def main():
     is_async_mode = False
     render_time = 0
     ret, frame = cap.read()
-    ret2, frame2 = cap2.read()
+    # ret2, frame2 = cap2.read()
 
     # Montage width and height
     # In this case means 2x1 boxes
@@ -140,54 +141,59 @@ def main():
     frameList = []
 
     print("To close the application, press 'CTRL+C' or any key with focus on the output window")
-    while cap.isOpened() or cap2.isOpened():
+    # while cap.isOpened() or cap2.isOpened():
+    while cap.isOpened():
         if is_async_mode:
             ret, next_frame = cap.read()
-            ret2, next_frame2 = cap2.read()
+            # ret2, next_frame2 = cap2.read()
         else:
             ret, frame = cap.read()
-            ret2, frame2 = cap2.read()
-        if not (ret and ret2):
+            # ret2, frame2 = cap2.read()
+        #if not (ret and ret2):
+        if not ret:
             break
         initial_w = cap.get(3)
         initial_h = cap.get(4)
-        initial_w2 = cap2.get(3)
-        initial_h2 = cap2.get(4)
+        # initial_w2 = cap2.get(3)
+        # initial_h2 = cap2.get(4)
         # Main sync point:
         # in the truly Async mode we start the NEXT infer request, while waiting for the CURRENT to complete
         # in the regular mode we start the CURRENT request and immediately wait for it's completion
         inf_start = time.time()
         if is_async_mode:
-            if ret and ret2:
+            # if ret and ret2:
+            if ret:
                 in_frame = cv2.resize(next_frame, (w, h))
                 in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
                 in_frame = in_frame.reshape((n, c, h, w))
                 exec_net.start_async(request_id=next_request_id, inputs={input_blob: in_frame})
 
-                in_frame2 = cv2.resize(next_frame2, (w2, h2))
-                in_frame2 = in_frame2.transpose((2, 0, 1))  # Change data layout from HWC to CHW
-                in_frame2 = in_frame2.reshape((n2, c2, h2, w2))
-                exec_net.start_async(request_id=next_request_id2, inputs={input_blob2: in_frame2})
+                # in_frame2 = cv2.resize(next_frame2, (w2, h2))
+                # in_frame2 = in_frame2.transpose((2, 0, 1))  # Change data layout from HWC to CHW
+                # in_frame2 = in_frame2.reshape((n2, c2, h2, w2))
+                # exec_net.start_async(request_id=next_request_id2, inputs={input_blob2: in_frame2})
 
         else:
-            if (ret and ret2):
+            # if (ret and ret2):
+            if ret:
                 in_frame = cv2.resize(frame, (w, h))
                 in_frame = in_frame.transpose((2, 0, 1))  # Change data layout from HWC to CHW
                 in_frame = in_frame.reshape((n, c, h, w))
                 exec_net.start_async(request_id=cur_request_id, inputs={input_blob: in_frame})
 
-                in_frame2 = cv2.resize(frame2, (w2, h2))
-                in_frame2 = in_frame2.transpose((2, 0, 1))  # Change data layout from HWC to CHW
-                in_frame2 = in_frame2.reshape((n2, c2, h2, w2))
-                exec_net.start_async(request_id=cur_request_id2, inputs={input_blob2: in_frame2})
+                # in_frame2 = cv2.resize(frame2, (w2, h2))
+                # in_frame2 = in_frame2.transpose((2, 0, 1))  # Change data layout from HWC to CHW
+                # in_frame2 = in_frame2.reshape((n2, c2, h2, w2))
+                # exec_net.start_async(request_id=cur_request_id2, inputs={input_blob2: in_frame2})
 
-        if exec_net.requests[cur_request_id].wait(-1) == 0 and exec_net.requests[cur_request_id2].wait(-1) == 0:
+        # if exec_net.requests[cur_request_id].wait(-1) == 0 and exec_net.requests[cur_request_id2].wait(-1) == 0:
+        if exec_net.requests[cur_request_id].wait(-1) == 0:
             inf_end = time.time()
             det_time = inf_end - inf_start
 
             # Parse detection results of the current request
             res = exec_net.requests[cur_request_id].outputs[out_blob]
-            res2 = exec_net.requests[cur_request_id2].outputs[out_blob2]
+            # res2 = exec_net.requests[cur_request_id2].outputs[out_blob2]
 
             for obj in res[0][0]:
                 # Draw only objects when probability more than specified threshold
@@ -206,22 +212,22 @@ def main():
                     print('Object detected, class_id:', class_id, 'probability:', obj[2], 'xmin:', xmin, 'ymin:', ymin,
                           'xmax:', xmax, 'ymax:', ymax)
 
-            for obj in res2[0][0]:
-                # Draw only objects when probability more than specified threshold
-                if obj[2] > args.prob_threshold:
-                    xmin = int(obj[3] * initial_w2)
-                    ymin = int(obj[4] * initial_h2)
-                    xmax = int(obj[5] * initial_w2)
-                    ymax = int(obj[6] * initial_h2)
-                    class_id = int(obj[1])
-                    # Draw box and label\class_id
-                    color = (min(class_id * 12.5, 255), min(class_id * 7, 255), min(class_id * 5, 255))
-                    cv2.rectangle(frame2, (xmin, ymin), (xmax, ymax), color, 2)
-                    det_label = labels_map[class_id] if labels_map else str(class_id)
-                    cv2.putText(frame2, det_label + ' ' + str(round(obj[2] * 100, 1)) + ' %', (xmin, ymin - 7),
-                                cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
-                    print('Object detected, class_id:', class_id, 'probability:', obj[2], 'xmin:', xmin, 'ymin:', ymin,
-                          'xmax:', xmax, 'ymax:', ymax)
+            # for obj in res2[0][0]:
+            #     # Draw only objects when probability more than specified threshold
+            #     if obj[2] > args.prob_threshold:
+            #         xmin = int(obj[3] * initial_w2)
+            #         ymin = int(obj[4] * initial_h2)
+            #         xmax = int(obj[5] * initial_w2)
+            #         ymax = int(obj[6] * initial_h2)
+            #         class_id = int(obj[1])
+            #         # Draw box and label\class_id
+            #         color = (min(class_id * 12.5, 255), min(class_id * 7, 255), min(class_id * 5, 255))
+            #         cv2.rectangle(frame2, (xmin, ymin), (xmax, ymax), color, 2)
+            #         det_label = labels_map[class_id] if labels_map else str(class_id)
+            #         cv2.putText(frame2, det_label + ' ' + str(round(obj[2] * 100, 1)) + ' %', (xmin, ymin - 7),
+            #                     cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+            #         print('Object detected, class_id:', class_id, 'probability:', obj[2], 'xmin:', xmin, 'ymin:', ymin,
+            #               'xmax:', xmax, 'ymax:', ymax)
 
             # Draw performance stats
             inf_time_message = "Inference time: Not applicable for async mode" if is_async_mode else \
@@ -237,20 +243,22 @@ def main():
             cv2.putText(frame, async_mode_message, (10, int(initial_h - 20)), cv2.FONT_HERSHEY_COMPLEX, 0.5,
                         (10, 10, 200), 1)
 
-            cv2.putText(frame2, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
-            cv2.putText(frame2, render_time_message, (15, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (10, 10, 200), 1)
-            cv2.putText(frame2, async_mode_message, (10, int(initial_h - 20)), cv2.FONT_HERSHEY_COMPLEX, 0.5,
-                        (10, 10, 200), 1)
+            # cv2.putText(frame2, inf_time_message, (15, 15), cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
+            # cv2.putText(frame2, render_time_message, (15, 30), cv2.FONT_HERSHEY_COMPLEX, 0.5, (10, 10, 200), 1)
+            # cv2.putText(frame2, async_mode_message, (10, int(initial_h - 20)), cv2.FONT_HERSHEY_COMPLEX, 0.5,
+            #             (10, 10, 200), 1)
 
         render_start = time.time()
 
         if not args.ns:
-            if ret and ret2:
-                frameList.append(frame)
-                frameList.append(frame2)
-            montages = build_montages(frameList, (640, 480), (mW, mH))
-            for montage in montages:
-                cv2.imshow("Detection results", montage)
+            # if ret and ret2:
+            if ret:
+            #     frameList.append(frame)
+            #     # frameList.append(frame2)
+            # montages = build_montages(frameList, (640, 480), (mW, mH))
+            # for montage in montages:
+            #     cv2.imshow("Detection results", montage)
+                cv2.imshow("Detection results", frame)
             render_end = time.time()
             render_time = render_end - render_start
 
@@ -258,7 +266,7 @@ def main():
             cur_request_id, next_request_id = next_request_id, cur_request_id
 
             frame = next_frame
-            frame2 = next_frame2
+            # frame2 = next_frame2
         key = cv2.waitKey(1)
         if key == 27:
             break
@@ -267,7 +275,7 @@ def main():
             log.info("Switched to {} mode".format("async" if is_async_mode else "sync"))
 
     cap.release()
-    cap2.release()
+    # cap2.release()
     cv2.destroyAllWindows()
 
 
