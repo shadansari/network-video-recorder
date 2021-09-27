@@ -210,6 +210,8 @@ Similar to the input video and camera scenarios, the detction script can be run 
 
 
 ```
+gst-launch-1.0 rpicamsrc bitrate=1000000 ! video/x-raw,width=640,height=480,framerate=25/1,profile=baseline ! jpegenc ! rtpjpegpay ! udpsink host=10.128.99.49 port=5000
+
 python3 docker_openvino.py build -d cpu -os ubuntu18 --distribution runtime --product_version 2021.4
 
 python3 docker_openvino.py build -d cpu -os ubuntu18 --distribution dev --product_version 2021.4

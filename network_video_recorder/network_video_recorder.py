@@ -89,6 +89,7 @@ def main():
     elif args.input == 'gstreamer':
         # gst rtp sink
         input_stream = 'udpsrc port=5000 caps = " application/x-rtp, encoding-name=JPEG,payload=26" ! rtpjpegdepay ! decodebin ! videoconvert ! appsink'
+        #input_stream = 'udpsrc port=5000 caps = "application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! rtph264depay ! decodebin ! videoconvert ! appsink'
     else:
         input_stream = args.input
         assert os.path.isfile(args.input), "Specified input file doesn't exist"

@@ -1,14 +1,16 @@
 define PROJECT_HELP_MSG
 Usage:
-    make help			show this message
-    make clean			remove intermediate files
+    make help                   show this message
+    make clean                  remove intermediate files
 
-    make ${VENV}			make a virtualenv in the base directory
-    make python-reqs		install python packages in requirements.pip
-    make git-config		set local git configuration
-    make setup			make python-reqs
+    make ${VENV}                  make a virtualenv in the base directory
+    make python-reqs            install python packages in requirements.pip
+    make git-config             set local git configuration
+    make setup                  make python-reqs
 
-    make run			launch network-video-recorder
+    make run                    launch network-video-recorder
+    make run-native             run native application (no docker)
+    make run-native-no-show     run native applicaiton (no docker) w/o video outpu
 endef
 export PROJECT_HELP_MSG
 
@@ -31,11 +33,17 @@ build:
 run:
 	docker run -itu root:root --privileged --network host --name $(IMAGE) --rm $(IMAGE)
 
-run-native:
-	. ./network_video_recorder.sh
+run-native-test:
+	. ./network_video_recorder.sh -i ./resources/face-demographics-walking.mp4 
 
-#run: $(VENV)/bin/activate
-#	source /opt/intel/openvino/bin/setupvars.sh; python3 network_video_recorder/network_video_recorder.py -d CPU -i ./resources/face-demographics-walking.mp4 -i2 ./resources/people-detection.mp4 -m ./resources/models/intel/person-detection-retail-0013/FP32/person-detection-retail-0013.xml
+run-native:
+	. ./network_video_recorder.sh -i gstreamer
+
+run-native-test-no-show:
+	. ./network_video_recorder.sh -i ./resources/face-demographics-walking.mp4 -ns
+
+run-native-no-show:
+	. ./network_video_recorder.sh -i gstreamer -ns
 
 CLEANUP = *.pyc $(VENV)
 clean:
